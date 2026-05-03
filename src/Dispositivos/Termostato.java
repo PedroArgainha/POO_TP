@@ -70,7 +70,7 @@ public class Termostato extends Dispositivo implements Temperavel, Monitoravel {
     private double fatorConsumoTemperatura(){
         double diferenca = Math.abs(this.temperaturaAlvo - this.temperaturaAtual);
         double diferencaMaxima = TEMP_MAX - TEMP_MIN;
-        return 0.1 + 0.9 + Math.min(diferenca / diferencaMaxima, 1.0);
+        return 0.1 + 0.9 * Math.min(diferenca / diferencaMaxima, 1.0);
     }
 
     @Override

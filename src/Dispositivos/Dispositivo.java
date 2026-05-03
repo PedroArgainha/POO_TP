@@ -8,6 +8,11 @@ public abstract class Dispositivo implements Serializable {
     // variável de classe para gerar IDs únicos sequenciais
     private static int proximoId = 1;
 
+    // Necessário para a serialização: ao carregar de ficheiro, o contador estático
+    // precisa de ser reposicionado para evitar colisões de IDs.
+    public static void setProximoId(int id) {
+        proximoId = id;
+    }
     private int id;
     private String nome;
     private String marca;

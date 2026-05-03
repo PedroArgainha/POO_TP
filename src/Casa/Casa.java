@@ -1,7 +1,11 @@
 package Casa;
 
 import Dispositivos.Dispositivo;
+import Exceptions.CorInvalidaException;
+import Exceptions.DispositivoNaoExisteException;
 import Exceptions.DivisaoNaoExisteException;
+import Exceptions.NivelInvalidoException;
+import Exceptions.TemperaturaInvalidaException;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -20,6 +24,12 @@ public class Casa implements Serializable {
     // Metodo de classe para gerar IDs únicos
     private static String geraId() {
         return "C" + proximoId++;
+    }
+
+    // Necessário para a serialização: ao carregar de ficheiro, o contador estático
+    // precisa de ser reposicionado para evitar colisões de IDs.
+    public static void setProximoId(int id) {
+        proximoId = id;
     }
 
     // Construtor por omissão
@@ -138,6 +148,112 @@ public class Casa implements Serializable {
 
     public void removeDivisao(String nome) {
         this.divisoes.remove(nome);
+    }
+
+    // --- Métodos de manipulação de dispositivos ---
+    // Delegam para a Divisão correspondente, que opera no dispositivo original.
+
+    // Método auxiliar privado: obtém a divisão REAL (não clone) do mapa interno.
+    // Centraliza a validação para evitar duplicação de código.
+    private Divisao getDivisaoInterna(String nomeDivisao) throws DivisaoNaoExisteException {
+        Divisao div = this.divisoes.get(nomeDivisao);
+        if (div == null) {
+            throw new DivisaoNaoExisteException("Divisão '" + nomeDivisao + "' não existe.");
+        }
+        return div;
+    }
+
+    public void ligarDispositivo(String nomeDivisao, int idDispositivo)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.ligarDispositivo(idDispositivo);
+    }
+
+    public void desligarDispositivo(String nomeDivisao, int idDispositivo)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.desligarDispositivo(idDispositivo);
+    }
+
+
+    public void alterarNivelDispositivo(String nomeDivisao, int idDispositivo, int nivel)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException, NivelInvalidoException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.alterarNivelDispositivo(idDispositivo, nivel);
+    }
+
+    public void alterarTemperaturaDispositivo(String nomeDivisao, int idDispositivo, double temperatura)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException, TemperaturaInvalidaException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.alterarTemperaturaDispositivo(idDispositivo, temperatura);
+    }
+
+    public void alterarCorDispositivo(String nomeDivisao, int idDispositivo, int cor)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException, CorInvalidaException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.alterarCorDispositivo(idDispositivo, cor);
+    }
+
+    public void abrirDispositivo(String nomeDivisao, int idDispositivo)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.abrirDispositivo(idDispositivo);
+    }
+
+    public void fecharDispositivo(String nomeDivisao, int idDispositivo)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.fecharDispositivo(idDispositivo);
+    }
+
+    public void bloquearDispositivo(String nomeDivisao, int idDispositivo)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.bloquearDispositivo(idDispositivo);
+    }
+
+    public void desbloquearDispositivo(String nomeDivisao, int idDispositivo)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.desbloquearDispositivo(idDispositivo);
+    }
+
+    // --- Simulação de tempo ---
+    // Propaga o avanço de tempo a TODAS as divisões desta casa.
+
+    public void atualizarTempoDispositivos(double minutos) {
+        for (Divisao div : this.divisoes.values()) {
+            div.atualizarTempoDispositivos(minutos);
+        }
+    }
+
+    // --- Métodos para estatísticas ---
+
+    // Consumo total da casa: soma o consumo de todas as divisões.
+    public double consumoTotalCasa() {
+        double total = 0.0;
+        for (Divisao div : this.divisoes.values()) {
+            total += div.consumoTotalDivisao();
+        }
+        return total;
+    }
+
+    // Número total de dispositivos na casa.
+    public int getNumeroTotalDispositivos() {
+        int total = 0;
+        for (Divisao div : this.divisoes.values()) {
+            total += div.getNumeroDispositivos();
+        }
+        return total;
+    }
+
+    // Devolve TODOS os dispositivos de todas as divisões (clones, para consulta).
+    public java.util.List<Dispositivo> getTodosDispositivos() {
+        java.util.List<Dispositivo> todos = new java.util.ArrayList<>();
+        for (Divisao div : this.divisoes.values()) {
+            todos.addAll(div.listaDispositivos());
+        }
+        return todos;
     }
 
     @Override

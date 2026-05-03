@@ -24,6 +24,12 @@ public class Utilizador implements Serializable {
         return "U" + proximoId++;
     }
 
+    // Necessário para a serialização: ao carregar de ficheiro, o contador estático
+    // precisa de ser reposicionado para evitar colisões de IDs.
+    public static void setProximoId(int id) {
+        proximoId = id;
+    }
+
     // construtor por omissão -> novo utilizador
     public Utilizador() {
         this.id = geraId();

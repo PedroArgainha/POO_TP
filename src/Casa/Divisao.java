@@ -1,5 +1,14 @@
 package Casa;
 import Dispositivos.Dispositivo;
+import Exceptions.CorInvalidaException;
+import Exceptions.DispositivoNaoExisteException;
+import Exceptions.NivelInvalidoException;
+import Exceptions.TemperaturaInvalidaException;
+import Interfaces.Abrivel;
+import Interfaces.Bloqueavel;
+import Interfaces.Colorivel;
+import Interfaces.Regulavel;
+import Interfaces.Temperavel;
 
 import java.io.Serializable;
 import java.util.List;
@@ -89,5 +98,108 @@ public class Divisao implements Serializable {
                 '}';
     }
 
-}
+    // --- Métodos de manipulação de dispositivos ---
+    // Estes métodos operam diretamente no dispositivo original (não num clone)
+    // para que as alterações de estado persistam.
 
+    // Método auxiliar privado para obter o dispositivo original.
+    // Centraliza a validação — evita repetir o mesmo null-check em cada método.
+    private Dispositivo getDispositivoOriginal(int idDispositivo) throws DispositivoNaoExisteException {
+        Dispositivo d = this.dispositivos.get(idDispositivo);
+        if (d == null) {
+            throw new DispositivoNaoExisteException("Dispositivo com id " + idDispositivo + " não existe nesta divisão.");
+        }
+        return d;
+    }
+
+    // --- ON / OFF ---
+
+    public void ligarDispositivo(int idDispositivo) throws DispositivoNaoExisteException {
+        getDispositivoOriginal(idDispositivo).ligar();
+    }
+
+    public void desligarDispositivo(int idDispositivo) throws DispositivoNaoExisteException {
+        getDispositivoOriginal(idDispositivo).desligar();
+    }
+
+    // --- Regulavel (ex: volume, intensidade, abertura) ---
+
+    public void alterarNivelDispositivo(int idDispositivo, int nivel)
+            throws DispositivoNaoExisteException, NivelInvalidoException {
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        if (!(d instanceof Regulavel)) {
+            throw new NivelInvalidoException("O dispositivo '" + d.getNome() + "' não é regulável.");
+        }
+        ((Regulavel) d).setNivel(nivel);
+    }
+
+    // --- Temperavel (ex: ArCondicionado, Forno, Frigorifico, Termostato) ---
+
+    public void alterarTemperaturaDispositivo(int idDispositivo, double temperatura)
+            throws DispositivoNaoExisteException, TemperaturaInvalidaException {
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        if (!(d instanceof Temperavel)) {
+            throw new TemperaturaInvalidaException("O dispositivo '" + d.getNome() + "' não suporta regulação de temperatura.");
+        }
+        ((Temperavel) d).setTemperatura(temperatura);
+    }
+
+    // --- Colorivel (ex: Lampada) ---
+
+    public void alterarCorDispositivo(int idDispositivo, int cor)
+            throws DispositivoNaoExisteException, CorInvalidaException {
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        if (!(d instanceof Colorivel)) {
+            throw new CorInvalidaException("O dispositivo '" + d.getNome() + "' não suporta alteração de cor.");
+        }
+        ((Colorivel) d).setCor(cor);
+    }
+
+    // --- Abrivel (ex: Cortina, Persiana, PortaoGaragem) ---
+
+    public void abrirDispositivo(int idDispositivo) throws DispositivoNaoExisteException {
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        if (!(d instanceof Abrivel)) {
+            throw new DispositivoNaoExisteException("O dispositivo '" + d.getNome() + "' não é abrível.");
+        }
+        ((Abrivel) d).abrir();
+    }
+
+    public void fecharDispositivo(int idDispositivo) throws DispositivoNaoExisteException {
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        if (!(d instanceof Abrivel)) {
+            throw new DispositivoNaoExisteException("O dispositivo '" + d.getNome() + "' não é abrível.");
+        }
+        ((Abrivel) d).fechar();
+    }
+
+    // --- Bloqueavel (ex: FechaduraInteligente) ---
+
+    public void bloquearDispositivo(int idDispositivo) throws DispositivoNaoExisteException {
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        if (!(d instanceof Bloqueavel)) {
+            throw new DispositivoNaoExisteException("O dispositivo '" + d.getNome() + "' não é bloqueável.");
+        }
+        ((Bloqueavel) d).bloquear();
+    }
+
+    public void desbloquearDispositivo(int idDispositivo) throws DispositivoNaoExisteException {
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        if (!(d instanceof Bloqueavel)) {
+            throw new DispositivoNaoExisteException("O dispositivo '" + d.getNome() + "' não é bloqueável.");
+        }
+        ((Bloqueavel) d).desbloquear();
+    }
+
+    // --- Simulação de tempo ---
+    // Itera sobre todos os dispositivos desta divisão.
+    // Para cada dispositivo que está ligado, acumula o tempo passado.
+    // Este método é chamado pela Casa, que por sua vez é chamada pelo DomusControl.
+
+    public void atualizarTempoDispositivos(double minutos) {
+        for (Dispositivo d : this.dispositivos.values()) {
+            d.registarTempoLigado(minutos);
+        }
+    }
+
+}
