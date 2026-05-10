@@ -9,6 +9,7 @@ import Interfaces.Bloqueavel;
 import Interfaces.Colorivel;
 import Interfaces.Regulavel;
 import Interfaces.Temperavel;
+import Interfaces.Monitoravel;
 
 import java.io.Serializable;
 import java.util.List;
@@ -31,10 +32,7 @@ public class Divisao implements Serializable {
     // Construtor por cópia
     public Divisao(Divisao d) {
         this.nome = d.getNome();
-        this.dispositivos = new HashMap<>();
-        for (Map.Entry<Integer, Dispositivo> e : d.dispositivos.entrySet()) {
-            this.dispositivos.put(e.getKey(), e.getValue().clone());
-        }
+        this.dispositivos = d.getDispositivos();
     }
 
     public String getNome() {
@@ -101,14 +99,20 @@ public class Divisao implements Serializable {
                 '}';
     }
 
+    public boolean existeDispositivo(int idDispositivo) {
+        return this.dispositivos.containsKey(idDispositivo);
+    }
+
     // --- Métodos de manipulação de dispositivos ---
     // Estes métodos operam diretamente no dispositivo original (não num clone)
     // para que as alterações de estado persistam.
 
-    // Método auxiliar privado para obter o dispositivo original.
-    // Centraliza a validação — evita repetir o mesmo null-check em cada método.
+    // Metodo auxiliar privado para obter o dispositivo original.
+    // Centraliza a validação — evita repetir o mesmo null-check em cada metodo.
     private Dispositivo getDispositivoOriginal(int idDispositivo) throws DispositivoNaoExisteException {
+
         Dispositivo d = this.dispositivos.get(idDispositivo);
+
         if (d == null) {
             throw new DispositivoNaoExisteException("Dispositivo com id " + idDispositivo + " não existe nesta divisão.");
         }
@@ -216,8 +220,87 @@ public class Divisao implements Serializable {
      * Package-private de propósito: só a Casa (mesmo package) deve usar isto,
      * para resolver IDs vindos das Ações de automações/cenários.
      */
-    // Altera o nome e adiciona 'public' no Divisao.java
-    public Dispositivo getDispositivo(int idDispositivo) {
-        return this.dispositivos.get(idDispositivo);
+
+
+    public Dispositivo getDispositivo(int idDispositivo)
+            throws DispositivoNaoExisteException {
+        return getDispositivoOriginal(idDispositivo).clone();
     }
+
+    public String estadoDetalhadoDispositivo(int idDispositivo)
+            throws DispositivoNaoExisteException {
+
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+        return formatarEstadoDispositivo(d);
+    }
+
+    public String estadoDetalhadoTodosDispositivos() {
+        StringBuilder sb = new StringBuilder();
+
+        if (this.dispositivos.isEmpty()) {
+            sb.append("  (Sem dispositivos nesta divisão)\n");
+            return sb.toString();
+        }
+
+        for (Dispositivo d : this.dispositivos.values()) {
+            sb.append(formatarEstadoDispositivo(d));
+            sb.append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    private String formatarEstadoDispositivo(Dispositivo d) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("--- Estado de: ").append(d.getNome()).append(" ---\n");
+        sb.append("ID: ").append(d.getId()).append("\n");
+        sb.append("Marca: ").append(d.getMarca()).append("\n");
+        sb.append("Modelo: ").append(d.getModelo()).append("\n");
+        sb.append("Energia: ").append(d.isLigado() ? "LIGADO (ON)" : "DESLIGADO (OFF)").append("\n");
+        sb.append("Consumo atual: ").append(String.format("%.2f", d.consumoAtual())).append(" Wh\n");
+        sb.append("Consumo acumulado: ").append(String.format("%.2f", d.consumoTotalDispositivo())).append(" Wh\n");
+        sb.append("Número de ativações: ").append(d.getNumeroAtivacoes()).append("\n");
+        sb.append("Tempo ligado: ").append(String.format("%.2f", d.getTempoLigado())).append(" minutos\n");
+
+        if (d instanceof Regulavel) {
+            sb.append("Nível: ").append(((Regulavel) d).getNivel()).append("%\n");
+        }
+
+        if (d instanceof Temperavel) {
+            sb.append("Temperatura: ").append(((Temperavel) d).getTemperatura()).append(" ºC\n");
+        }
+
+        if (d instanceof Colorivel) {
+            sb.append("Cor: ").append(((Colorivel) d).getCor()).append("K\n");
+        }
+
+        if (d instanceof Abrivel) {
+            sb.append("Aberto: ").append(((Abrivel) d).isAberto() ? "sim" : "não").append("\n");
+        }
+
+        if (d instanceof Bloqueavel) {
+            sb.append("Bloqueado: ").append(((Bloqueavel) d).isBloqueado() ? "sim" : "não").append("\n");
+        }
+
+        if (d instanceof Monitoravel) {
+            Monitoravel m = (Monitoravel) d;
+            sb.append("Leitura atual: ").append(m.getValorAtual()).append(" ").append(m.getUnidade()).append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    public void simularLeituraSensor(int idDispositivo, double valor)
+            throws DispositivoNaoExisteException {
+
+        Dispositivo d = getDispositivoOriginal(idDispositivo);
+
+        if (!(d instanceof Monitoravel)) {
+            throw new DispositivoNaoExisteException("Este dispositivo não é um sensor.");
+        }
+
+        ((Monitoravel) d).simularLeitura(valor);
+    }
+
 }

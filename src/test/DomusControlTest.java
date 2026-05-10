@@ -228,8 +228,8 @@ public class DomusControlTest {
         @Test
         @DisplayName("casaQueMaisConsome devolve a casa correta")
         void casaQueMaisConsomeCorreta() {
-            assertEquals("Casa Rica", dc.casaQueMaisConsome().getNome());
-        }
+        assertTrue(dc.casaQueMaisConsome().contains("Casa Rica"));
+        }   
 
         @Test
         @DisplayName("consumoTotalSistema é positivo após ligar dispositivos")

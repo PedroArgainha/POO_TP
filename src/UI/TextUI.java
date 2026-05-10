@@ -4,13 +4,18 @@ import Acoes.*;
 import Automacoes.*;
 import Automacoes.condicoes.*;
 import Casa.Casa;
+import Cenarios.Cenario;
 import Dispositivos.*;
+import DomusControl.DomusControl;
 import Interfaces.AcaoAutomacao;
+import Sugestoes.SugestaoEscalonamento;
 import Utilizador.Utilizador;
 
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class TextUI {
@@ -50,20 +55,6 @@ public class TextUI {
 
         menuInicial.run();
         System.out.println("Até à próxima!");
-    }
-
-    private void carregarEstadoTeste() {
-        try {
-            this.model.popularEstadoTeste();
-            System.out.println("✓ Estado de teste carregado!");
-            System.out.println();
-            System.out.println("Logins disponíveis:");
-            System.out.println("  ana@teste.pt   / ana    (admin Casa da Ana — tem automações)");
-            System.out.println("  bruno@teste.pt / bruno  (admin Casa do Bruno)");
-            System.out.println("  carla@teste.pt / carla  (utilizadora da Casa do Bruno)");
-        } catch (Exception e) {
-            System.out.println("Erro: " + e.getMessage());
-        }
     }
 
     // ============================================================
@@ -140,6 +131,7 @@ public class TextUI {
                 "Adicionar Divisão a Casa",
                 "Adicionar Utilizador a Casa",
                 "Tornar Utilizador Administrador de Casa",
+                "Listar Utilizadores de uma Casa",
                 "Eliminar Casa",
                 "Sair de Casa"
         });
@@ -148,8 +140,9 @@ public class TextUI {
         menu.setHandler(2, this::adicionarDivisao);
         menu.setHandler(3, this::adicionarUtilizadorACasa);
         menu.setHandler(4, this::adicionarAdminACasa);
-        menu.setHandler(5, this::eliminarCasa);
-        menu.setHandler(6, this::sairDeCasa);
+        menu.setHandler(5, this::listarUtilizadoresDaCasa);
+        menu.setHandler(6, this::eliminarCasa);
+        menu.setHandler(7, this::sairDeCasa);
 
         menu.run();
     }
@@ -368,62 +361,59 @@ public class TextUI {
 
     private void verEstadoDetalhado() {
         String idCasa = pedirIdCasa();
-        if (idCasa == null || idCasa.isEmpty()) return;
-        String div = pedirNomeDivisao(idCasa);
-        if (div == null) return;
-        int id = pedirIdDispositivo(idCasa, div);
-        if (id < 0) return;
+
+        if (idCasa == null || idCasa.isEmpty()) {
+            return;
+        }
+
+        System.out.println("\n=== Ver Estado Detalhado ===");
+        System.out.println("1. Ver dispositivo específico");
+        System.out.println("2. Ver todas as divisões da casa");
+
+        int opcao = pedirInteiro("Opção: ");
 
         try {
-            // Vamos buscar a casa e o dispositivo para mostrar os dados reais
-            Casa casa = this.model.getCasasDoUserLogado().stream()
-                    .filter(c -> c.getId().equals(idCasa)).findFirst().orElse(null);
-            
-            Dispositivo d = casa.getDivisao(div).getDispositivo(id);
-            
-            System.out.println("\n--- Estado de: " + d.getNome() + " ---");
-            System.out.println("ID: " + d.getId());
-            System.out.println("Energia: " + (d.isLigado() ? "LIGADO (ON)" : "DESLIGADO (OFF)"));
-            System.out.println("Consumo acumulado: " + String.format("%.2f", d.consumoTotalDispositivo()) + " Wh");
-            
-            // Mostrar info extra dependendo do tipo
-            if (d instanceof SensorChuva) 
-                System.out.println("Chuva atual: " + ((SensorChuva) d).getValorAtual() + " mm/h");
-            if (d instanceof SensorLuminosidade) 
-                System.out.println("Luz atual: " + ((SensorLuminosidade) d).getValorAtual() + " lux");
-            if (d instanceof Cortina)
-                System.out.println("Abertura: " + ((Cortina) d).getNivel() + "%");
-                
-        } catch (Exception e) { System.out.println("Erro ao obter estado."); }
-    }
+            if (opcao == 1) {
+                String div = pedirNomeDivisao(idCasa);
 
-    private void simularLeitura() {
-        String idCasa = pedirIdCasa();
-        if (idCasa == null || idCasa.isEmpty()) return;
-        String div = pedirNomeDivisao(idCasa);
-        if (div == null) return;
-        int id = pedirIdDispositivo(idCasa, div);
-        double valor = pedirDouble("Novo valor para o sensor: ");
+                if (div == null || div.isEmpty()) {
+                    return;
+                }
 
-        try {
-            // Nota: Para isto funcionar, precisas de ter um método no DomusControl 
-            // ou aceder via Casa para fazer d.simularLeitura(valor)
-            Casa casa = this.model.getCasasDoUserLogado().stream()
-                    .filter(c -> c.getId().equals(idCasa)).findFirst().orElse(null);
-            
-            Dispositivo d = casa.getDivisao(div).getDispositivo(id);
-            
-            if (d instanceof SensorChuva) {
-                ((SensorChuva) d).simularLeitura(valor);
-                System.out.println("✓ Sensor de Chuva atualizado para " + valor + " mm/h");
-            } else if (d instanceof SensorLuminosidade) {
-                ((SensorLuminosidade) d).simularLeitura(valor);
-                System.out.println("✓ Sensor de Luz atualizado para " + valor + " lux");
-            } else {
-                System.out.println("Este dispositivo não permite simular leituras.");
+                int id = pedirIdDispositivo(idCasa, div);
+
+                if (id < 0) {
+                    return;
+                }
+
+                System.out.println(this.model.estadoDetalhadoDispositivo(idCasa, div, id));
             }
-        } catch (Exception e) { System.out.println("Erro ao simular leitura."); }
+            else if (opcao == 2) {
+                System.out.println(this.model.estadoDetalhadoTodasDivisoes(idCasa));
+            }
+            else {
+                System.out.println("Opção inválida.");
+            }
+
+        } catch (Exception e) {
+            System.out.println("Erro ao obter estado detalhado: " + e.getMessage());
+        }
     }
+    private void simularLeitura() {
+    String idCasa = pedirIdCasa();
+    if (idCasa == null || idCasa.isEmpty()) return;
+    String div = pedirNomeDivisao(idCasa);
+    if (div == null) return;
+    int id = pedirIdDispositivo(idCasa, div);
+    double valor = pedirDouble("Novo valor para o sensor: ");
+
+    try {
+        this.model.simularLeituraSensor(idCasa, div, id, valor);
+        System.out.println("✓ Sensor atualizado para " + valor);
+    } catch (Exception e) { 
+        System.out.println("Erro: " + e.getMessage()); 
+    }
+}
 
     // ============================================================
     // AUTOMAÇÕES, ESCALONAMENTOS E CENÁRIOS
@@ -681,4 +671,46 @@ public class TextUI {
             default: return null;
         }
     }
+
+    private void carregarEstadoTeste() {
+    try {
+        this.model.popularEstadoTeste();
+        System.out.println("✓ Estado de teste carregado com sucesso!");
+        System.out.println("  Logins disponíveis:");
+        System.out.println("    ana@teste.pt   / ana");
+        System.out.println("    bruno@teste.pt / bruno");
+        System.out.println("    carla@teste.pt / carla");
+    } catch (IllegalStateException e) {
+        System.out.println("Erro: " + e.getMessage());
+    } catch (Exception e) {
+        System.out.println("Erro ao carregar estado de teste: " + e.getMessage());
+    }
+}
+
+private void listarUtilizadoresDaCasa() {
+    String idCasa = pedirIdCasa();
+
+    if (idCasa == null || idCasa.isEmpty()) {
+        return;
+    }
+
+    try {
+        Map<String, String> utilizadores = this.model.listarUtilizadoresDaCasa(idCasa);
+
+        if (utilizadores.isEmpty()) {
+            System.out.println("\nEsta casa não tem utilizadores associados.");
+            return;
+        }
+
+        System.out.println("\n=== Utilizadores da Casa " + idCasa + " ===");
+
+        for (Map.Entry<String, String> entry : utilizadores.entrySet()) {
+            System.out.println(" · " + entry.getKey() + " -> " + entry.getValue());
+        }
+
+    } catch (Exception e) {
+        System.out.println("Erro: " + e.getMessage());
+    }
+}
+
 }

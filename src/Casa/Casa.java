@@ -17,6 +17,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
 
+import Automacoes.Automacao;
+import Automacoes.CondicaoAutomacao;
+import Automacoes.Escalonamento;
+import Interfaces.AcaoAutomacao;
+
 import java.time.LocalTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -130,6 +135,13 @@ public class Casa implements Serializable {
             return this.divisoes.get(nome).clone();
         }
         return null;
+    }
+
+    public Dispositivo getDispositivoPorId(int idDispositivo)
+            throws DispositivoNaoExisteException {
+
+        return getDivisaoDoDispositivo(idDispositivo)
+                .getDispositivo(idDispositivo);
     }
 
     // Setters
@@ -316,13 +328,12 @@ public class Casa implements Serializable {
                 '}';
     }
 
-    public Dispositivo getDispositivoPorId(int idDispositivo)
+    private Divisao getDivisaoDoDispositivo(int idDispositivo)
             throws DispositivoNaoExisteException {
 
         for (Divisao div : this.divisoes.values()) {
-            Dispositivo d = div.getDispositivo(idDispositivo);
-            if (d != null) {
-                return d;
+            if (div.existeDispositivo(idDispositivo)) {
+                return div;
             }
         }
 
@@ -331,112 +342,66 @@ public class Casa implements Serializable {
         );
     }
 
+
     public void ligarDispositivoPorId(int idDispositivo)
             throws DispositivoNaoExisteException {
-        getDispositivoPorId(idDispositivo).ligar();
+
+        getDivisaoDoDispositivo(idDispositivo).ligarDispositivo(idDispositivo);
     }
 
     public void desligarDispositivoPorId(int idDispositivo)
             throws DispositivoNaoExisteException {
-        getDispositivoPorId(idDispositivo).desligar();
+
+        getDivisaoDoDispositivo(idDispositivo).desligarDispositivo(idDispositivo);
     }
 
     public void alterarNivelDispositivoPorId(int idDispositivo, int nivel)
             throws DispositivoNaoExisteException, NivelInvalidoException {
 
-        Dispositivo d = getDispositivoPorId(idDispositivo);
-
-        if (!(d instanceof Regulavel)) {
-            throw new DispositivoNaoExisteException(
-                    "O dispositivo " + idDispositivo + " não é regulável."
-            );
-        }
-
-        ((Regulavel) d).setNivel(nivel);
+        getDivisaoDoDispositivo(idDispositivo)
+                .alterarNivelDispositivo(idDispositivo, nivel);
     }
 
     public void alterarTemperaturaDispositivoPorId(int idDispositivo, double temperatura)
             throws DispositivoNaoExisteException, TemperaturaInvalidaException {
 
-        Dispositivo d = getDispositivoPorId(idDispositivo);
-
-        if (!(d instanceof Temperavel)) {
-            throw new DispositivoNaoExisteException(
-                    "O dispositivo " + idDispositivo + " não permite temperatura."
-            );
-        }
-
-        ((Temperavel) d).setTemperatura(temperatura);
+        getDivisaoDoDispositivo(idDispositivo)
+                .alterarTemperaturaDispositivo(idDispositivo, temperatura);
     }
 
     public void alterarCorDispositivoPorId(int idDispositivo, int cor)
             throws DispositivoNaoExisteException, CorInvalidaException {
 
-        Dispositivo d = getDispositivoPorId(idDispositivo);
-
-        if (!(d instanceof Colorivel)) {
-            throw new DispositivoNaoExisteException(
-                    "O dispositivo " + idDispositivo + " não permite cor."
-            );
-        }
-
-        ((Colorivel) d).setCor(cor);
+        getDivisaoDoDispositivo(idDispositivo)
+                .alterarCorDispositivo(idDispositivo, cor);
     }
 
     public void abrirDispositivoPorId(int idDispositivo)
             throws DispositivoNaoExisteException {
 
-        Dispositivo d = getDispositivoPorId(idDispositivo);
-
-        if (!(d instanceof Abrivel)) {
-            throw new DispositivoNaoExisteException(
-                    "O dispositivo " + idDispositivo + " não é abrível."
-            );
-        }
-
-        ((Abrivel) d).abrir();
+        getDivisaoDoDispositivo(idDispositivo)
+                .abrirDispositivo(idDispositivo);
     }
 
     public void fecharDispositivoPorId(int idDispositivo)
             throws DispositivoNaoExisteException {
 
-        Dispositivo d = getDispositivoPorId(idDispositivo);
-
-        if (!(d instanceof Abrivel)) {
-            throw new DispositivoNaoExisteException(
-                    "O dispositivo " + idDispositivo + " não é abrível."
-            );
-        }
-
-        ((Abrivel) d).fechar();
+        getDivisaoDoDispositivo(idDispositivo)
+                .fecharDispositivo(idDispositivo);
     }
 
     public void bloquearDispositivoPorId(int idDispositivo)
             throws DispositivoNaoExisteException {
 
-        Dispositivo d = getDispositivoPorId(idDispositivo);
-
-        if (!(d instanceof Bloqueavel)) {
-            throw new DispositivoNaoExisteException(
-                    "O dispositivo " + idDispositivo + " não é bloqueável."
-            );
-        }
-
-        ((Bloqueavel) d).bloquear();
+        getDivisaoDoDispositivo(idDispositivo)
+                .bloquearDispositivo(idDispositivo);
     }
 
     public void desbloquearDispositivoPorId(int idDispositivo)
             throws DispositivoNaoExisteException {
 
-        Dispositivo d = getDispositivoPorId(idDispositivo);
-
-        if (!(d instanceof Bloqueavel)) {
-            throw new DispositivoNaoExisteException(
-                    "O dispositivo " + idDispositivo + " não é bloqueável."
-            );
-        }
-
-        ((Bloqueavel) d).desbloquear();
+        getDivisaoDoDispositivo(idDispositivo)
+                .desbloquearDispositivo(idDispositivo);
     }
 
     public String criarAutomacao(String nome, CondicaoAutomacao condicao, AcaoAutomacao acao) {
@@ -517,6 +482,46 @@ public class Casa implements Serializable {
     public List<String> getIdsEscalonamentos() {
         return new ArrayList<>(this.escalonamentos.keySet());
     }
+
+    public String estadoDetalhadoDispositivo(String nomeDivisao, int idDispositivo)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        return div.estadoDetalhadoDispositivo(idDispositivo);
+    }
+
+    public void simularLeituraSensor(String nomeDivisao, int idDispositivo, double valor)
+            throws DivisaoNaoExisteException, DispositivoNaoExisteException {
+
+        Divisao div = getDivisaoInterna(nomeDivisao);
+        div.simularLeituraSensor(idDispositivo, valor);
+    }
+
+    public String estadoDetalhadoTodasDivisoes() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("\n=== Estado detalhado da casa: ")
+                .append(this.nome)
+                .append(" (")
+                .append(this.id)
+                .append(") ===\n");
+
+        if (this.divisoes.isEmpty()) {
+            sb.append("\nEsta casa não tem divisões.\n");
+            return sb.toString();
+        }
+
+        for (Map.Entry<String, Divisao> entry : this.divisoes.entrySet()) {
+            sb.append("\n==============================\n");
+            sb.append("Divisão: ").append(entry.getKey()).append("\n");
+            sb.append("==============================\n");
+            sb.append(entry.getValue().estadoDetalhadoTodosDispositivos());
+        }
+
+        return sb.toString();
+    }
+
+
 
 
 }

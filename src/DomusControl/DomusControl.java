@@ -3,10 +3,10 @@ package DomusControl;
 import Sugestoes.SugestaoEscalonamento;
 import Sugestoes.RegistoInteracao;
 import Sugestoes.AnalisadorPadroes;
-import Acoes.AcaoDesligarTodos;
-import Acoes.AcaoLigarDispositivos;
-import Acoes.AcaoFecharCortinas;
 import Acoes.AcaoAbrirFecharCortinas;
+import Acoes.AcaoDesligarTodos;
+import Acoes.AcaoFecharCortinas;
+import Acoes.AcaoLigarDispositivos;
 import Automacoes.Automacao;
 import Automacoes.CondicaoAutomacao;
 import Automacoes.Escalonamento;
@@ -18,7 +18,18 @@ import Cenarios.Cenario;
 import Exceptions.*;
 import Interfaces.AcaoAutomacao;
 import Utilizador.Utilizador;
-import Dispositivos.*;
+import Dispositivos.ArCondicionado;
+import Dispositivos.ColunaSom;
+import Dispositivos.Cortina;
+import Dispositivos.Dispositivo;
+import Dispositivos.Forno;
+import Dispositivos.Frigorifico;
+import Dispositivos.Lampada;
+import Dispositivos.PortaoGaragem;
+import Dispositivos.SensorChuva;
+import Dispositivos.SensorLuminosidade;
+import Dispositivos.SensorTemperatura;
+import Dispositivos.Televisao;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -52,7 +63,7 @@ public class DomusControl implements Serializable {
         if (user == null) throw new UserNaoregistadoException("O seu email está inválido");
         if (!user.getPassword().equals(password)) throw new PasswordIncorretaException("...");
         this.userLogado = user;
-        return user;
+        return user.clone();
     }
 
     // metodo de logout
@@ -353,11 +364,11 @@ public class DomusControl implements Serializable {
     // 1. Casa que mais consome (em Wh acumulado)
     //    Percorre todas as casas e devolve a que tem maior consumoTotalCasa().
     //    Devolve null se não existirem casas.
-    public Casa casaQueMaisConsome() {
-        return this.casas.values().stream()
-                .max(Comparator.comparingDouble(Casa::consumoTotalCasa))
-                .map(Casa::clone)
-                .orElse(null);
+    public String casaQueMaisConsome() {
+    return this.casas.values().stream()
+            .max(Comparator.comparingDouble(Casa::consumoTotalCasa))
+            .map(c -> c.getId() + " - " + c.getNome())
+            .orElse(null);
     }
 
     // 2a. Top 3 dispositivos mais utilizados por TEMPO de utilização (numa casa)
@@ -680,6 +691,13 @@ public class DomusControl implements Serializable {
                 .collect(Collectors.toList());
     }
 
+    public void simularLeituraSensor(String idCasa, String nomeDivisao, int idDispositivo, double valor)
+            throws CasaNaoExisteException, DivisaoNaoExisteException, DispositivoNaoExisteException {
+
+        Casa casa = validarAcessoCasa(idCasa);
+        casa.simularLeituraSensor(nomeDivisao, idDispositivo, valor);
+    }
+
     /**
      * Popula o sistema com um estado de exemplo, para testar o programa
      * sem ter de digitar tudo à mão.
@@ -776,10 +794,10 @@ public class DomusControl implements Serializable {
 
         // Simular leituras nos sensores reais (acedendo via casa, que devolve
         // referências reais — estamos dentro do model, é legítimo)
-        Casa casaAna = this.casas.get(idCasaAna);
-        ((SensorChuva)        casaAna.getDispositivoPorId(idSensorChuva)).simularLeitura(7.5);  // a chover
-        ((SensorLuminosidade) casaAna.getDispositivoPorId(idSensorLux)).simularLeitura(50.0);  // está escuro
-        ((SensorTemperatura)  casaAna.getDispositivoPorId(idSensorTemp)).simularLeitura(18.0);
+
+        simularLeituraSensor(idCasaAna, "Exterior", idSensorChuva, 7.5);
+        simularLeituraSensor(idCasaAna, "Exterior", idSensorLux, 50.0);
+        simularLeituraSensor(idCasaAna, "Exterior", idSensorTemp, 18.0);
 
         // 3. Casa 2 — admin: Bruno; Carla é utilizadora
         logout();
@@ -851,17 +869,67 @@ public class DomusControl implements Serializable {
      * Helper privado para apanhar o id da casa que o utilizador logado
      * acabou de criar (a mais recente das que ele administra).
      */
-    private String ultimoIdCasaCriada() {
-        String maisRecente = null;
-        int maxNum = -1;
-        for (String id : this.userLogado.getCasasComoAdmin()) {
-            // ids têm o formato "C<numero>"
-            try {
-                int n = Integer.parseInt(id.substring(1));
-                if (n > maxNum) { maxNum = n; maisRecente = id; }
-            } catch (NumberFormatException ignored) {}
-        }
-        return maisRecente;
+
+    /**
+ * Devolve o ID da casa mais recentemente criada pelo utilizador logado.
+ * Usado internamente pelo popularEstadoTeste().
+ */
+private String ultimoIdCasaCriada() {
+    Utilizador user = getUserLogado();
+    // getCasasComoAdmin devolve um Set — para apanhar o último
+    // aproveitamos que o ID tem formato "C1", "C2", etc.
+    // e devolvemos o que tem o número mais alto
+    return user.getCasasComoAdmin().stream()
+            .max(Comparator.comparingInt(id -> Integer.parseInt(id.substring(1))))
+            .orElseThrow(() -> new IllegalStateException("Nenhuma casa encontrada."));
+}
+
+    public String estadoDetalhadoDispositivo(String idCasa, String nomeDivisao, int idDispositivo)
+            throws CasaNaoExisteException, DivisaoNaoExisteException, DispositivoNaoExisteException {
+
+        Casa casa = validarAcessoCasa(idCasa);
+        return casa.estadoDetalhadoDispositivo(nomeDivisao, idDispositivo);
     }
+
+    public String estadoDetalhadoTodasDivisoes(String idCasa)
+            throws CasaNaoExisteException {
+
+        Casa casa = validarAcessoCasa(idCasa);
+        return casa.estadoDetalhadoTodasDivisoes();
+    }
+
+public Map<String, String> listarUtilizadoresDaCasa(String idCasa)
+        throws CasaNaoExisteException, NotAdminException {
+
+    Utilizador user = getUserLogado();
+
+    if (!this.casas.containsKey(idCasa)) {
+        throw new CasaNaoExisteException("Casa não existe.");
+    }
+
+    if (!user.isUtilizadorCasa(idCasa)) {
+        throw new NotAdminException("Não tem acesso a esta casa.");
+    }
+
+    Map<String, String> resultado = new LinkedHashMap<>();
+
+    for (Utilizador u : this.utilizadores.values()) {
+
+        if (u.isAdminCasa(idCasa)) {
+            resultado.put(
+                    u.getNome() + " (" + u.getEmail() + ")",
+                    "Administrador"
+            );
+        }
+        else if (u.isUtilizadorCasa(idCasa)) {
+            resultado.put(
+                    u.getNome() + " (" + u.getEmail() + ")",
+                    "Utilizador"
+            );
+        }
+    }
+
+    return resultado;
+}
 
 }
