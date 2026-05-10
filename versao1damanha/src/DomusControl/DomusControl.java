@@ -5,18 +5,20 @@ import Sugestoes.RegistoInteracao;
 import Sugestoes.AnalisadorPadroes;
 import Acoes.AcaoDesligarTodos;
 import Acoes.AcaoLigarDispositivos;
+import Acoes.AcaoFecharCortinas;
+import Acoes.AcaoAbrirFecharCortinas;
 import Automacoes.Automacao;
 import Automacoes.CondicaoAutomacao;
 import Automacoes.Escalonamento;
+import Automacoes.condicoes.Condicaochuva;
+import Automacoes.condicoes.Condicaoluminosidade;
 import Casa.Casa;
 import Casa.Divisao;
 import Cenarios.Cenario;
 import Exceptions.*;
 import Interfaces.AcaoAutomacao;
 import Utilizador.Utilizador;
-import Dispositivos.Dispositivo;
-import Dispositivos.SensorChuva;
-import Dispositivos.SensorLuminosidade;
+import Dispositivos.*;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -660,7 +662,7 @@ public class DomusControl implements Serializable {
 
 
     // ============================================================
-    // Método necessário para a TextUI funcionar
+    // Metodo necessário para a TextUI funcionar
     // ============================================================
     public List<Casa> getCasasDoUserLogado() {
         Utilizador user = getUserLogado();
@@ -676,6 +678,190 @@ public class DomusControl implements Serializable {
                 .filter(Objects::nonNull)
                 .map(Casa::clone) 
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Popula o sistema com um estado de exemplo, para testar o programa
+     * sem ter de digitar tudo à mão.
+     *
+     * Cria:
+     *   - 3 utilizadores
+     *   - 2 casas (Casa da Ana, Casa do Bruno) com várias divisões
+     *   - ~15 dispositivos espalhados por divisões
+     *   - sensores com leituras simuladas (chuva forte, está escuro)
+     *   - 2 automações na Casa da Ana (chuva → fechar, escuro → ligar)
+     *   - 1 escalonamento (luzes da sala 19:00–23:00)
+     *   - 2 cenários (Sair de Casa, Acordar)
+     *
+     * Logins de teste:
+     *   ana@teste.pt    / ana
+     *   bruno@teste.pt  / bruno
+     *   carla@teste.pt  / carla
+     *
+     * Lança IllegalStateException se já existirem utilizadores no sistema.
+     */
+    public void popularEstadoTeste() throws Exception {
+        if (!this.utilizadores.isEmpty()) {
+            throw new IllegalStateException(
+                "Já existem utilizadores — estado de teste só carrega num sistema vazio.");
+        }
+
+        // 1. Utilizadores
+        criarUtilizador("Ana",   "ana",   "ana@teste.pt");
+        criarUtilizador("Bruno", "bruno", "bruno@teste.pt");
+        criarUtilizador("Carla", "carla", "carla@teste.pt");
+
+        // 2. Casa 1 — admin: Ana
+        login("ana@teste.pt", "ana");
+        criarCasa("Casa da Ana", "Rua das Flores 12, Braga");
+        String idCasaAna = ultimoIdCasaCriada();
+
+        adicionarDivisao(idCasaAna, "Sala");
+        adicionarDivisao(idCasaAna, "Cozinha");
+        adicionarDivisao(idCasaAna, "Quarto");
+        adicionarDivisao(idCasaAna, "Exterior");
+
+        // ids dos dispositivos que vamos precisar para automações/cenários
+        Lampada luzSala     = new Lampada("Luz Sala",     "Philips", "Hue",     9.0, 80, 2700);
+        Cortina cortinaSala = new Cortina("Cortina Sala", "Generic", "C1",      30.0, 100);
+        ColunaSom colunaSala= new ColunaSom("Coluna Sala","Sonos",   "One",     12.0, 30);
+        Televisao tvSala    = new Televisao("TV Sala",    "LG",      "OLED",    110.0, 20, 5);
+
+        adicionarDispositivoADivisao(idCasaAna, "Sala", luzSala);
+        adicionarDispositivoADivisao(idCasaAna, "Sala", cortinaSala);
+        adicionarDispositivoADivisao(idCasaAna, "Sala", colunaSala);
+        adicionarDispositivoADivisao(idCasaAna, "Sala", tvSala);
+
+        Lampada luzCozinha = new Lampada("Luz Cozinha", "IKEA", "Tradfri", 8.0, 100, 4000);
+        Frigorifico frigo  = new Frigorifico("Frigorifico", "Bosch", "F100", 50.0, 4.0);
+        Forno forno        = new Forno("Forno", "Bosch", "O200", 2000.0, 180.0);
+
+        adicionarDispositivoADivisao(idCasaAna, "Cozinha", luzCozinha);
+        adicionarDispositivoADivisao(idCasaAna, "Cozinha", frigo);
+        adicionarDispositivoADivisao(idCasaAna, "Cozinha", forno);
+
+        Lampada luzQuarto       = new Lampada("Luz Quarto", "Philips", "Hue", 9.0, 50, 2700);
+        Cortina cortinaQuarto   = new Cortina("Cortina Quarto", "Generic", "C1", 30.0, 0);
+        ArCondicionado acQuarto = new ArCondicionado("AC Quarto", "Daikin", "AC500", 1500.0, 22.0);
+
+        adicionarDispositivoADivisao(idCasaAna, "Quarto", luzQuarto);
+        adicionarDispositivoADivisao(idCasaAna, "Quarto", cortinaQuarto);
+        adicionarDispositivoADivisao(idCasaAna, "Quarto", acQuarto);
+
+        SensorChuva sensorChuva = new SensorChuva("Sensor Chuva", "Bosch", "S1", 0.5);
+        SensorLuminosidade sensorLux = new SensorLuminosidade("Sensor Lux", "Bosch", "S2", 0.5);
+        SensorTemperatura sensorTemp = new SensorTemperatura("Sensor Temp", "Bosch", "S3", 0.5);
+
+        adicionarDispositivoADivisao(idCasaAna, "Exterior", sensorChuva);
+        adicionarDispositivoADivisao(idCasaAna, "Exterior", sensorLux);
+        adicionarDispositivoADivisao(idCasaAna, "Exterior", sensorTemp);
+
+        // Capturar os ids ANTES de ligar (os ids são definidos no construtor do dispositivo)
+        int idLuzSala       = luzSala.getId();
+        int idCortinaSala   = cortinaSala.getId();
+        int idColunaSala    = colunaSala.getId();
+        int idTvSala        = tvSala.getId();
+        int idLuzCozinha    = luzCozinha.getId();
+        int idLuzQuarto     = luzQuarto.getId();
+        int idCortinaQuarto = cortinaQuarto.getId();
+        int idAcQuarto      = acQuarto.getId();
+        int idSensorChuva   = sensorChuva.getId();
+        int idSensorLux     = sensorLux.getId();
+        int idSensorTemp    = sensorTemp.getId();
+
+        // Ligar sensores (estes precisam de estar ligados para reportar leituras)
+        ligarDispositivo(idCasaAna, "Exterior", idSensorChuva);
+        ligarDispositivo(idCasaAna, "Exterior", idSensorLux);
+        ligarDispositivo(idCasaAna, "Exterior", idSensorTemp);
+
+        // Simular leituras nos sensores reais (acedendo via casa, que devolve
+        // referências reais — estamos dentro do model, é legítimo)
+        Casa casaAna = this.casas.get(idCasaAna);
+        ((SensorChuva)        casaAna.getDispositivoPorId(idSensorChuva)).simularLeitura(7.5);  // a chover
+        ((SensorLuminosidade) casaAna.getDispositivoPorId(idSensorLux)).simularLeitura(50.0);  // está escuro
+        ((SensorTemperatura)  casaAna.getDispositivoPorId(idSensorTemp)).simularLeitura(18.0);
+
+        // 3. Casa 2 — admin: Bruno; Carla é utilizadora
+        logout();
+        login("bruno@teste.pt", "bruno");
+        criarCasa("Casa do Bruno", "Avenida Central 5, Guimarães");
+        String idCasaBruno = ultimoIdCasaCriada();
+
+        adicionarDivisao(idCasaBruno, "Sala");
+        adicionarDivisao(idCasaBruno, "Garagem");
+
+        adicionarDispositivoADivisao(idCasaBruno, "Sala",
+            new Lampada("Luz Sala B", "IKEA", "Tradfri", 8.0, 100, 3000));
+        adicionarDispositivoADivisao(idCasaBruno, "Garagem",
+            new PortaoGaragem("Portão", "Hörmann", "G1", 200.0, 0));
+
+        adicionarUtilizadorACasa(idCasaBruno, "carla@teste.pt");
+
+        // 4. Voltar à Ana para criar automações/escalonamentos/cenários da casa dela
+        logout();
+        login("ana@teste.pt", "ana");
+
+        // Automação 1: chuva forte → fechar cortinas da casa toda
+        List<Integer> idsCortinas = Arrays.asList(idCortinaSala, idCortinaQuarto);
+        criarAutomacao(idCasaAna,
+            "Fechar cortinas se chover",
+            new Condicaochuva(idSensorChuva, 5.0),
+            new AcaoFecharCortinas(idsCortinas));
+
+        // Automação 2: luminosidade baixa → ligar todas as lâmpadas
+        List<Integer> idsLampadas = Arrays.asList(idLuzSala, idLuzCozinha, idLuzQuarto);
+        criarAutomacao(idCasaAna,
+            "Ligar luzes se estiver escuro",
+            new Condicaoluminosidade(idSensorLux, 100.0),
+            new AcaoLigarDispositivos(idsLampadas));
+
+        // Escalonamento: luzes da sala 19:00–23:00, repete diariamente
+        List<Integer> idsLuzesSala = Arrays.asList(idLuzSala);
+        criarEscalonamento(idCasaAna,
+            "Luzes Sala à noite",
+            LocalTime.of(19, 0),
+            LocalTime.of(23, 0),
+            new AcaoLigarDispositivos(idsLuzesSala),
+            new AcaoDesligarTodos(idsLuzesSala),
+            true);
+
+        // Cenário "Sair de Casa": desliga tudo (menos sensores e frigorífico)
+        // e fecha todas as cortinas
+        List<Integer> idsParaDesligar = Arrays.asList(
+            idLuzSala, idLuzCozinha, idLuzQuarto,
+            idColunaSala, idTvSala, idAcQuarto);
+        String idSair = criarCenario(idCasaAna, "Sair de Casa", "Desliga tudo ao sair");
+        adicionarAcaoACenario(idSair,
+            new AcaoDesligarTodos(idsParaDesligar, "Desligar dispositivos da casa"));
+        adicionarAcaoACenario(idSair,
+            new AcaoAbrirFecharCortinas(idsCortinas, false));
+
+        // Cenário "Acordar": abre cortinas do quarto, liga luz suave
+        String idAcordar = criarCenario(idCasaAna, "Acordar", "Abre cortinas e liga luz");
+        adicionarAcaoACenario(idAcordar,
+            new AcaoAbrirFecharCortinas(Arrays.asList(idCortinaQuarto), true));
+        adicionarAcaoACenario(idAcordar,
+            new AcaoLigarDispositivos(Arrays.asList(idLuzQuarto), "Ligar luz do quarto"));
+
+        // Logout no fim — deixa o sistema pronto para o utilizador fazer login
+        logout();
+    }
+
+    /**
+     * Helper privado para apanhar o id da casa que o utilizador logado
+     * acabou de criar (a mais recente das que ele administra).
+     */
+    private String ultimoIdCasaCriada() {
+        String maisRecente = null;
+        int maxNum = -1;
+        for (String id : this.userLogado.getCasasComoAdmin()) {
+            // ids têm o formato "C<numero>"
+            try {
+                int n = Integer.parseInt(id.substring(1));
+                if (n > maxNum) { maxNum = n; maisRecente = id; }
+            } catch (NumberFormatException ignored) {}
+        }
+        return maisRecente;
     }
 
 }

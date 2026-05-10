@@ -17,11 +17,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
 
-import Automacoes.Automacao;
-import Automacoes.CondicaoAutomacao;
-import Automacoes.Escalonamento;
-import Interfaces.AcaoAutomacao;
-
 import java.time.LocalTime;
 import java.util.List;
 import java.util.ArrayList;

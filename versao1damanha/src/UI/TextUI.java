@@ -4,18 +4,13 @@ import Acoes.*;
 import Automacoes.*;
 import Automacoes.condicoes.*;
 import Casa.Casa;
-import Cenarios.Cenario;
 import Dispositivos.*;
-import DomusControl.DomusControl;
 import Interfaces.AcaoAutomacao;
-import Sugestoes.SugestaoEscalonamento;
 import Utilizador.Utilizador;
 
 import java.time.LocalTime;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 
 public class TextUI {
@@ -43,16 +38,32 @@ public class TextUI {
                 "Registar novo utilizador",
                 "Fazer Login",
                 "Carregar estado de ficheiro",
-                "Gravar estado para ficheiro"
+                "Gravar estado para ficheiro",
+                "Carregar estado de teste"
         });
 
         menuInicial.setHandler(1, this::registarUtilizador);
         menuInicial.setHandler(2, this::fazerLogin);
         menuInicial.setHandler(3, this::carregarEstado);
         menuInicial.setHandler(4, this::gravarEstado);
+        menuInicial.setHandler(5, this::carregarEstadoTeste);
 
         menuInicial.run();
         System.out.println("Até à próxima!");
+    }
+
+    private void carregarEstadoTeste() {
+        try {
+            this.model.popularEstadoTeste();
+            System.out.println("✓ Estado de teste carregado!");
+            System.out.println();
+            System.out.println("Logins disponíveis:");
+            System.out.println("  ana@teste.pt   / ana    (admin Casa da Ana — tem automações)");
+            System.out.println("  bruno@teste.pt / bruno  (admin Casa do Bruno)");
+            System.out.println("  carla@teste.pt / carla  (utilizadora da Casa do Bruno)");
+        } catch (Exception e) {
+            System.out.println("Erro: " + e.getMessage());
+        }
     }
 
     // ============================================================

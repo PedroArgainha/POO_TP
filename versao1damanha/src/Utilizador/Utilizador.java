@@ -1,7 +1,5 @@
 package Utilizador;
 
-import Cenarios.Cenario;
-import Interfaces.AcaoAutomacao;
 import Sugestoes.RegistoInteracao;
 
 import java.io.Serializable;
@@ -9,6 +7,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import Casa.Casa;
+import Cenarios.Cenario;
+import Interfaces.AcaoAutomacao;
 
 
 public class Utilizador implements Serializable {

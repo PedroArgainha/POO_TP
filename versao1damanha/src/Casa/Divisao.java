@@ -31,7 +31,10 @@ public class Divisao implements Serializable {
     // Construtor por cópia
     public Divisao(Divisao d) {
         this.nome = d.getNome();
-        this.dispositivos = d.getDispositivos();
+        this.dispositivos = new HashMap<>();
+        for (Map.Entry<Integer, Dispositivo> e : d.dispositivos.entrySet()) {
+            this.dispositivos.put(e.getKey(), e.getValue().clone());
+        }
     }
 
     public String getNome() {
