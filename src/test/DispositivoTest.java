@@ -2,15 +2,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.*;
 
-import Dispositivos.ColunaSom;
-import Dispositivos.Cortina;
-import Dispositivos.Forno;
-import Dispositivos.Lampada;
-import Dispositivos.Relay;
-import Dispositivos.SensorChuva;
-import Exceptions.CorInvalidaException;
-import Exceptions.NivelInvalidoException;
-import Exceptions.TemperaturaInvalidaException;
+import Model.Dispositivos.ColunaSom;
+import Model.Dispositivos.Cortina;
+import Model.Dispositivos.Forno;
+import Model.Dispositivos.Lampada;
+import Model.Dispositivos.Relay;
+import Model.Dispositivos.SensorChuva;
+import Model.Exceptions.CorInvalidaException;
+import Model.Exceptions.NivelInvalidoException;
+import Model.Exceptions.TemperaturaInvalidaException;
 
 /**
  * Testes para a classe abstrata Dispositivo e as subclasses mais relevantes.

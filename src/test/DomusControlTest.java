@@ -1,12 +1,8 @@
-import DomusControl.DomusControl;
-import Dispositivos.*;
-import Casa.Casa;
-import Casa.Divisao;
-import Exceptions.*;
+import Controller.DomusControl;
+import Model.Dispositivos.*;
+import Model.Exceptions.*;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.Set;
 
 /**
  * Testes para DomusControl.

@@ -1,15 +1,14 @@
-import Automacoes.Automacao;
-import Automacoes.CondicaoAutomacao;
-import Automacoes.condicoes.Condicaochuva;
-import Automacoes.condicoes.Condicaoluminosidade;
-import Cenarios.Cenario;
-import Sugestoes.AnalisadorPadroes;
-import Sugestoes.RegistoInteracao;
-import Sugestoes.SugestaoEscalonamento;
-import Casa.Casa;
-import Casa.Divisao;
-import Dispositivos.*;
-import Interfaces.AcaoAutomacao;
+import Model.Automacoes.Automacao;
+import Model.Automacoes.condicoes.Condicaochuva;
+import Model.Automacoes.condicoes.Condicaoluminosidade;
+import Model.Cenarios.Cenario;
+import Model.Sugestoes.AnalisadorPadroes;
+import Model.Sugestoes.RegistoInteracao;
+import Model.Sugestoes.SugestaoEscalonamento;
+import Model.Casa.Casa;
+import Model.Casa.Divisao;
+import Model.Dispositivos.*;
+import Model.Interfaces.AcaoAutomacao;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 

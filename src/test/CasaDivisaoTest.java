@@ -1,7 +1,7 @@
-import Casa.Casa;
-import Casa.Divisao;
-import Dispositivos.*;
-import Exceptions.*;
+import Model.Casa.Casa;
+import Model.Casa.Divisao;
+import Model.Dispositivos.*;
+import Model.Exceptions.*;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 
